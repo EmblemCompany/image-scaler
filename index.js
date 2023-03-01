@@ -1,7 +1,29 @@
 const jimp = require('jimp');
-const express = require('express');
-const app = express();
-const port = 3000;
+const express = require('express')
+var bodyParser = require('body-parser')
+var cors = require('cors')
+
+const app = express()
+app.use(cors())
+app.options('*', cors()) // include before other routes
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+const port = process.env.PORT || 3000; // default port to listen
+
+app.use(function (req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  next();
+});
+
+app.options("/*", function (req, res, next) {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With');
+  res.send(200);
+})
+
+app.use(express.static('public'))
 
 // Define route to serve upscaled image
 app.get('/image', async (req, res) => {
@@ -29,6 +51,10 @@ app.get('/image', async (req, res) => {
 });
 
 // Start the server
+const PORT = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Server listening at http://localhost:${port}`);
-});
+})
+
+
+module.exports = app
