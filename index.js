@@ -31,23 +31,27 @@ app.get('/image', async (req, res) => {
   const imageUrl = req.query.url;
 
   // Download the image from the URL
-  const image = await jimp.read(imageUrl);
+  try {
+    const image = await jimp.read(imageUrl);
 
-  // Resize the image to a dynamic size without scaling or anti-aliasing
-  const size = parseInt(req.query.size) || 512;
-  image.resize(size, size, jimp.RESIZE_NEAREST_NEIGHBOR);
+    // Resize the image to a dynamic size without scaling or anti-aliasing
+    const size = parseInt(req.query.size) || 512;
+    image.resize(size, size, jimp.RESIZE_NEAREST_NEIGHBOR);
 
-  // Set response headers and send upscaled image data to client
-  res.setHeader('Content-Type', 'image/png');
-  image.getBuffer(jimp.MIME_PNG, (err, buffer) => {
-    if (err) {
-      console.error(err);
-      res.status(500).send('Internal server error');
-    } else {
-      res.setHeader('Content-Length', buffer.length);
-      res.send(buffer);
-    }
-  });
+    // Set response headers and send upscaled image data to client
+    res.setHeader('Content-Type', 'image/png');
+    image.getBuffer(jimp.MIME_PNG, (err, buffer) => {
+      if (err) {
+        console.error(err);
+        res.status(500).send('Internal server error');
+      } else {
+        res.setHeader('Content-Length', buffer.length);
+        res.send(buffer);
+      }
+    })
+  } catch(err){
+    return res.send('<html><head></head><body><script>location.href = \'' + imageUrl + '\'</script></body></html>');
+  }
 });
 
 // Start the server
