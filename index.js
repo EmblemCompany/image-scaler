@@ -2,6 +2,8 @@ const jimp = require('jimp');
 const express = require('express')
 var bodyParser = require('body-parser')
 var cors = require('cors')
+const request = require('request')
+const rp = require('request-promise-native')
 
 const app = express()
 app.use(cors())
@@ -50,7 +52,19 @@ app.get('/image', async (req, res) => {
       }
     })
   } catch(err){
-    return res.send('<html><head></head><body><script>location.href = \'' + imageUrl + '\'</script></body></html>');
+    const remoteResponse = await rp.get(imageUrl, {
+      resolveWithFullResponse: true,
+      encoding: null, // To receive the response as a Buffer
+    });
+
+    const contentType = remoteResponse.headers['content-type'];
+    if (contentType) {
+      res.setHeader('Content-Type', contentType);
+    }
+
+    // Pipe the remote response stream to the client response stream
+    request.get(imageUrl).pipe(res);
+    // return res.send('<html><head></head><body><script>location.href = \'' + imageUrl + '\'</script></body></html>');
   }
 });
 
