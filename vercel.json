@@ -15,9 +15,8 @@
     ],
     "routes": [
       {
-        "src": "/image",
+        "src": "/(.*)",
         "dest": "index.js"
       }
-    ],
-    "regions": ["cle1"]
+    ]
   }
