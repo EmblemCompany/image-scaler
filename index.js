@@ -1,9 +1,12 @@
-const jimp = require('jimp');
+const jimp = require('jimp')
 const express = require('express')
 var bodyParser = require('body-parser')
 var cors = require('cors')
 const request = require('request')
 const rp = require('request-promise-native')
+const axios = require('axios')
+const { dataUriToBuffer } = require('data-uri-to-buffer')
+const sharp = require('sharp')
 
 const app = express()
 app.use(cors())
@@ -65,6 +68,48 @@ app.get('/image', async (req, res) => {
     // Pipe the remote response stream to the client response stream
     request.get(imageUrl).pipe(res);
     // return res.send('<html><head></head><body><script>location.href = \'' + imageUrl + '\'</script></body></html>');
+  }
+});
+
+async function resizeImage(uri, width, height) {
+  let imageBuffer;
+
+  if (uri.startsWith('data:')) {
+      imageBuffer = dataUriToBuffer(uri);
+  } else {
+      const response = await axios.get(uri, { responseType: 'arraybuffer' });
+      imageBuffer = Buffer.from(response.data, 'binary');
+  }
+
+  const resizedImageBuffer = await sharp(imageBuffer)
+      .resize(width, height, { 
+          fit: 'fill', 
+          kernel: sharp.kernel.nearest 
+      })
+      .toFormat('png')
+      .toBuffer();
+
+  return resizedImageBuffer;
+}
+
+app.get('/image2', async (req, res) => {
+  const { url, size } = req.query;
+  let uri = url.split(' ').join('+')
+  let width = parseInt(size) || 512
+  let height = parseInt(size) || 512
+
+  try {
+      if (!url || !width || !height) {
+          return res.status(400).send("Bad request. Please make sure 'uri', 'width' and 'height' parameters are provided.");
+      }
+
+      const image = await resizeImage(uri, Number(width), Number(height));
+
+      res.setHeader('Content-Type', 'image/png');
+      res.send(image);
+  } catch (error) {
+      console.error(error);
+      res.status(500).send("An error occurred while processing the image.");
   }
 });
 
