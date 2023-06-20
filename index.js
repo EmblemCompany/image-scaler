@@ -69,13 +69,36 @@ app.get('/image', async (req, res) => {
     request.get(imageUrl).pipe(res);
     // return res.send('<html><head></head><body><script>location.href = \'' + imageUrl + '\'</script></body></html>');
   }
-});
+})
 
-async function resizeImage(uri, width, height) {
+app.get('/image2', async (req, res) => {
+  const { url, size } = req.query;
+  let uri = url.split(' ').join('+')
+  let width = parseInt(size) || 512
+  let height = parseInt(size) || 512
+
+  try {
+      if (!url || !width || !height) {
+          return res.status(400).send("Bad request. Please make sure 'uri', 'width' and 'height' parameters are provided.");
+      }
+
+      const image = await processImage(uri, Number(width), Number(height));
+
+      res.setHeader('Content-Type', image.type);
+      res.send(image.bytes);
+  } catch (error) {
+      console.error(error);
+      res.status(500).send("An error occurred while processing the image.");
+  }
+})
+
+async function processImage(uri, width, height) {
   let imageBuffer;
 
   if (uri.startsWith('data:')) {
-      imageBuffer = dataUriToBuffer(uri);
+    let maybeText = handleText(uri, width, height)
+    if(maybeText) return maybeText
+    imageBuffer = dataUriToBuffer(uri);
   } else {
       const response = await axios.get(uri, { responseType: 'arraybuffer' });
       imageBuffer = Buffer.from(response.data, 'binary');
@@ -89,29 +112,42 @@ async function resizeImage(uri, width, height) {
       .toFormat('png')
       .toBuffer();
 
-  return resizedImageBuffer;
+  return {type: 'image/png', bytes: resizedImageBuffer}
 }
 
-app.get('/image2', async (req, res) => {
-  const { url, size } = req.query;
-  let uri = url.split(' ').join('+')
-  let width = parseInt(size) || 512
-  let height = parseInt(size) || 512
-
+async function handleText(uri, width, height) {
   try {
-      if (!url || !width || !height) {
-          return res.status(400).send("Bad request. Please make sure 'uri', 'width' and 'height' parameters are provided.");
-      }
-
-      const image = await resizeImage(uri, Number(width), Number(height));
-
-      res.setHeader('Content-Type', 'image/png');
-      res.send(image);
+    let maybeText = uri.split(':,')[1] 
+    let parsed = maybeText? JSON.parse(maybeText.replace(/\\/g, '')): null
+    if (parsed) {
+      return makeTextImage(parsed, width, height)
+    }
   } catch (error) {
-      console.error(error);
-      res.status(500).send("An error occurred while processing the image.");
+    console.log(error)
+    return false
   }
-});
+}
+
+async function makeTextImage(text, width, height) {
+  let template = `<?xml version="1.0" encoding="utf-8"?>
+  <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+  <svg xmlns="http://www.w3.org/2000/svg"
+     xmlns:xhtml="http://www.w3.org/1999/xhtml"
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     version="1.1"
+     viewBox="0 0 512 512"
+     preserveAspectRatio="xMinYMin meet"
+     style="background-color:white;">
+     <foreignObject width="512" height="512">
+        <xhtml:div style="display: flex; align-items: center; justify-content: center; height: 100%; color: black; text-align: center;">
+           ${JSON.stringify(text, null, 4)}
+        </xhtml:div>
+     </foreignObject>
+  </svg>`
+  return {bytes: Buffer.from(template), type: 'image/svg+xml'}
+}
+
+
 
 // Start the server
 const PORT = process.env.PORT || 3000;
