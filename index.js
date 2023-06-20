@@ -96,8 +96,8 @@ async function processImage(uri, width, height) {
   let imageBuffer;
 
   if (uri.startsWith('data:')) {
-    let maybeText = handleText(uri, width, height)
-    if(maybeText) return maybeText
+    // let maybeText = handleText(uri, width, height)
+    // if(maybeText) return maybeText
     imageBuffer = dataUriToBuffer(uri);
   } else {
       const response = await axios.get(uri, { responseType: 'arraybuffer' });
@@ -121,7 +121,8 @@ async function handleText(uri, width, height) {
     let parsed = maybeText? JSON.parse(maybeText.replace(/\\/g, '')): null
     if (parsed) {
       return makeTextImage(parsed, width, height)
-    }
+    } 
+    return false
   } catch (error) {
     console.log(error)
     return false
