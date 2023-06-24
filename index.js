@@ -74,15 +74,15 @@ app.get('/image', async (req, res) => {
 app.get('/image2', async (req, res) => {
   const { url, size } = req.query;
   let uri = url.split(' ').join('+')
-  let width = parseInt(size) || 512
+  // let width = parseInt(size) || 512
   let height = parseInt(size) || 512
 
   try {
-      if (!url || !width || !height) {
+      if (!url || !height) {
           return res.status(400).send("Bad request. Please make sure 'uri', 'width' and 'height' parameters are provided.");
       }
 
-      const image = await processImage(uri, Number(width), Number(height));
+      const image = await processImage(uri, Number(height));
 
       res.setHeader('Content-Type', image.type);
       res.send(image.bytes);
@@ -92,7 +92,7 @@ app.get('/image2', async (req, res) => {
   }
 })
 
-async function processImage(uri, width, height) {
+async function processImage(uri, height) {
   let imageBuffer;
 
   if (uri.startsWith('data:')) {
@@ -104,15 +104,19 @@ async function processImage(uri, width, height) {
       imageBuffer = Buffer.from(response.data, 'binary');
   }
 
-  const resizedImageBuffer = await sharp(imageBuffer)
-      .resize(width, height, { 
-          fit: 'fill', 
+  const image = sharp(imageBuffer)
+  const metadata = await sharp(imageBuffer).metadata();
+  console.log(metadata)
+  let resizedImage = await image
+      .resize(null, height, { 
+          fit: 'inside', 
           kernel: sharp.kernel.nearest 
       })
-      .toFormat('png')
+  let resizedImageBuffer = await resizedImage
+      //.toFormat('png')
       .toBuffer();
 
-  return {type: 'image/png', bytes: resizedImageBuffer}
+  return {type: `image/${metadata.format}`, bytes: resizedImageBuffer}
 }
 
 async function handleText(uri, width, height) {
