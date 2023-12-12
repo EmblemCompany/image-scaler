@@ -103,7 +103,9 @@ async function processImage(uri, height) {
       const response = await axios.get(uri, { responseType: 'arraybuffer' });
       imageBuffer = Buffer.from(response.data, 'binary');
   }
-
+  if (!imageBuffer || imageBuffer.length == 0) {
+    return false
+  }
   const image = sharp(imageBuffer)
   const metadata = await sharp(imageBuffer).metadata();
   console.log(metadata)
