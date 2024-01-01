@@ -32,6 +32,7 @@ app.use(express.static('public'))
 
 // Define route to serve upscaled image
 app.get('/image', async (req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
   // Get the image URL from the query parameter
   const imageUrl = req.query.url;
 
@@ -72,6 +73,7 @@ app.get('/image', async (req, res) => {
 })
 
 app.get('/image2', async (req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
   const { url, size } = req.query;
   let uri = url.split(' ').join('+')
   // let width = parseInt(size) || 512
